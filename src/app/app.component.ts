@@ -35,31 +35,31 @@ export class MyApp {
 
   public pages = [
     {
-      title: 'Home',
+      title: 'Inicio',
       icon: 'ios-home-outline',
       count: 0,
       component: HomePage
     },
     {
-      title: 'Categories',
+      title: 'Catálogo',
       icon: 'ios-home-outline',
       count: 0,
       component: CategoriesPage
     },
     {
-      title: 'Order',
+      title: 'Ordenes',
       icon: 'ios-home-outline',
       count: 0,
       component: OrderPage
     },
     {
-      title: 'Taxes',
+      title: 'Impuestos/Descuentos',
       icon: 'ios-home-outline',
       count: 0,
       component: TaxesPage
     },
     {
-      title: 'Settings',
+      title: 'Ajustes',
       icon: 'ios-home-outline',
       count: 0,
       component: SettingPage

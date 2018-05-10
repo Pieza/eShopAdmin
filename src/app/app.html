@@ -9,7 +9,6 @@
       <!-- User profile -->
       <div text-left padding class="menu-left">
         <a menuClose>
-          <img class="profile-picture" src="{{ user.photoURL }}">
           <h4 color="dark">{{ user.name }}</h4>
         </a>
       </div>
@@ -21,7 +20,7 @@
         </button>
         <button ion-item menuClose (click)="logout()">
           <!--<ion-icon item-left name="ios-exit-outline"></ion-icon>-->
-          Logout
+          Cerrar Sesión
         </button>
       </ion-list>
     </ion-content>

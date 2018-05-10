@@ -29,7 +29,7 @@ export class RegisterPage {
   register() {
     if (!this.restaurantName || !this.email || !this.password) {
       let alert = this.alertCtrl.create({
-        message: 'Please provide restaurant\'s name, email and password',
+        message: 'Por favor complete todos los campos correctamente.',
         buttons: ['OK']
       });
       return alert.present();
@@ -37,14 +37,14 @@ export class RegisterPage {
 
     if (this.password != this.confirmPassword) {
       let alert = this.alertCtrl.create({
-        message: 'Confirm password does not match',
+        message: 'Las contraseñas no son iguales.',
         buttons: ['OK']
       });
       return alert.present();
     }
 
     let loading = this.loadingCtrl.create({
-      content: 'Please wait...'
+      content: 'Por favor espera...'
     });
     loading.present();
 

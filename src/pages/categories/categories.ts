@@ -39,14 +39,14 @@ export class CategoriesPage {
       title: 'Action',
       buttons: [
         {
-          text: 'Delete',
+          text: 'Borrar',
           role: 'destructive',
           handler: () => {
             // remove category
             this.itemService.removeByCategory(category.$key);
           }
         }, {
-          text: 'Cancel',
+          text: 'Cancelar',
           role: 'cancel',
           handler: () => {
             console.log('Cancel clicked');

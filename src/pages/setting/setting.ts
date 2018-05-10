@@ -24,9 +24,9 @@ export class SettingPage {
 
   // save form
   save() {
-    this.restaurantService.update(this.restaurant.name, this.restaurant.address);
+    this.restaurantService.update(this.restaurant.name);
     let toast = this.toastCtrl.create({
-      message: 'Settings have been saved',
+      message: 'Los ajustes han sido guardados',
       duration: 3000,
       position: 'middle'
     });

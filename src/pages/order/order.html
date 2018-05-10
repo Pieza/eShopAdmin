@@ -10,7 +10,7 @@
     <button ion-button menuToggle>
       <ion-icon name="menu"></ion-icon>
     </button>
-    <ion-title>Order</ion-title>
+    <ion-title>Ordenes</ion-title>
   </ion-navbar>
 
 </ion-header>
@@ -28,7 +28,7 @@
             <h4 ion-text color="primary">#{{ order.number }}</h4></div>
           <div class="light-bg padding-xs">
             <span class="pull-left">TOTAL</span>
-            <strong class="pull-right">${{ order.restaurants[restaurantId].subtotal }}</strong>
+            <strong class="pull-right">₡{{ order.restaurants[restaurantId].subtotal }}</strong>
             <div class="clear"></div>
           </div>
         </div>

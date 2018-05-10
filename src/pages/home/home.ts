@@ -20,10 +20,10 @@ export class HomePage {
     responsive: true,
     title: {
       display: true,
-      text: 'Daily sale'
+      text: 'Ventas diarias'
     }
   };
-  public barChartLabels: string[] = ['Daily sale'];
+  public barChartLabels: string[] = ['Ventas diarias'];
   public barChartType: string = 'line';
   public barChartLegend: boolean = false;
   public barChartData: any[] = [
@@ -37,7 +37,7 @@ export class HomePage {
   public pieChartOptions: any = {
     title: {
       display: true,
-      text: 'Popular items'
+      text: 'Productos populares'
     }
   }
 
@@ -80,7 +80,7 @@ export class HomePage {
         });
 
         // add sum of other items to chart
-        pieLabel.push('Other');
+        pieLabel.push('Otros');
         pieData.push(other);
         this.pieChartLabels = pieLabel;
         this.pieChartData = pieData;

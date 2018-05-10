@@ -29,10 +29,9 @@ export class RestaurantService {
   }
 
   // update restaurant info
-  update(name, address) {
+  update(name) {
     this.db.object('restaurants/' + this.id).update({
       name: name,
-      address: address
     });
   }
 }

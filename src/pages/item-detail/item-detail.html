@@ -15,7 +15,7 @@
         <ion-icon name="md-checkmark"></ion-icon>
       </button>
     </ion-buttons>
-    <ion-title>{{ isEditing ? 'Item detail' : 'Add item'}}</ion-title>
+    <ion-title>{{ isEditing ? 'Detalle producto' : 'Agregar producto'}}</ion-title>
   </ion-navbar>
 
 </ion-header>
@@ -62,7 +62,7 @@
       <ion-col col-lg-6>
         <ion-list class="list-no-border list-form">
           <ion-list-header>
-            Sizes
+            Tamaños
           </ion-list-header>
 
           <ion-item *ngFor="let size of item.sizes, let i = index">
@@ -95,7 +95,7 @@
       <ion-col col-lg-6>
         <ion-list class="list-no-border list-form">
           <ion-list-header>
-            Options
+            Opciones
           </ion-list-header>
 
           <ion-item *ngFor="let option of item.options, let i = index">
@@ -131,7 +131,7 @@
       <ion-col col-lg-6>
         <ion-list class="list-no-border list-form">
           <ion-list-header>
-            Taxes
+            Impuestos/Descuentos
           </ion-list-header>
 
           <ion-item *ngFor="let tax of taxes | async">

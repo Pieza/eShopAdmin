@@ -27,14 +27,14 @@ export class LoginPage {
   login() {
     if (!this.email || !this.password) {
       let alert = this.alertCtrl.create({
-        message: 'Please provide email and password',
+        message: 'Por favor digita un correo y contraseña válidos.',
         buttons: ['OK']
       });
       return alert.present();
     }
 
     let loading = this.loadingCtrl.create({
-      content: 'Please wait...'
+      content: 'Por favor espera...'
     });
     loading.present();
 
