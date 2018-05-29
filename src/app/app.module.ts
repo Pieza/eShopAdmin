@@ -9,19 +9,23 @@ import { SplashScreen } from '@ionic-native/splash-screen';
 import { AngularFireModule } from 'angularfire2';
 import { AngularFireDatabaseModule } from 'angularfire2/database';
 import { AngularFireAuthModule } from 'angularfire2/auth';
+import { AngularFirestoreModule } from "angularfire2/firestore";
 
 // Import chart module
 import { ChartsModule } from 'ng2-charts';
 
-// import services
-import { CategoryService } from '../services/category-service';
-import { ItemService } from '../services/item-service';
-import { UserService } from '../services/user-service';
-import { OrderService } from '../services/order-service';
-import { ReportService } from '../services/report-service';
-import { TaxService } from '../services/tax-service';
-import { RestaurantService } from '../services/restaurant-service';
-// end import services
+// import providers
+import { UserProvider } from '../providers/user/user';
+import { ItemProvider } from '../providers/item/item';
+import { CategoryProvider } from '../providers/category/category';
+import { NotificationProvider } from '../providers/notification/notification';
+import { OrderProvider } from '../providers/order/order';
+import { ReportProvider } from '../providers/report/report';
+import { SettingProvider } from '../providers/setting/setting';
+import { TaxProvider } from '../providers/tax/tax';
+import { StoreProvider } from '../providers/store/store';
+import { LoadingProvider } from '../providers/loading/loading';
+import { ToastProvider } from '../providers/toast/toast';
 
 // import pages
 import { ItemsPage } from '../pages/items/items';
@@ -32,24 +36,19 @@ import { HomePage } from '../pages/home/home';
 import { CategoryDetailPage } from '../pages/category-detail/category-detail';
 import { KeysPipe } from "../pipes/keys";
 import { ModalOrderPage } from '../pages/modal-order/modal-order';
-import { AuthService } from "../services/auth-service";
-import { NotificationService } from "../services/notification-service";
 import { LoginPage } from "../pages/login/login";
-import { UsersPage } from '../pages/users/users';
-import { TaxesPage } from '../pages/taxes/taxes';
-import { ModalTaxPage } from '../pages/modal-tax/modal-tax';
 import { RegisterPage } from '../pages/register/register';
 import { SettingPage } from '../pages/setting/setting';
 // end import pages
 
 // AF2 Settings
 export const firebaseConfig = {
-  apiKey: "AIzaSyCHHAGs9PDFJFk0G-DclU258xJdddlhZUM",
-  authDomain: "eshop-dd728.firebaseapp.com",
-  databaseURL: "https://eshop-dd728.firebaseio.com",
-  projectId: "eshop-dd728",
-  storageBucket: "eshop-dd728.appspot.com",
-  messagingSenderId: "206779703563"
+  apiKey: "AIzaSyCXOhx463t0_9rPZvwwHPi75-Ktp5M0J1k",
+  authDomain: "cerrajeria-c46c3.firebaseapp.com",
+  databaseURL: "https://cerrajeria-c46c3.firebaseio.com",
+  projectId: "cerrajeria-c46c3",
+  storageBucket: "cerrajeria-c46c3.appspot.com",
+  messagingSenderId: "822653543494"
 };
 
 @NgModule({
@@ -64,9 +63,6 @@ export const firebaseConfig = {
     CategoryDetailPage,
     ModalOrderPage,
     LoginPage,
-    UsersPage,
-    TaxesPage,
-    ModalTaxPage,
     RegisterPage,
     SettingPage,
     /* import pages */
@@ -75,6 +71,7 @@ export const firebaseConfig = {
     BrowserModule,
     IonicModule.forRoot(MyApp),
     AngularFireModule.initializeApp(firebaseConfig),
+    AngularFirestoreModule, // imports firebase/firestore, only needed for database features
     AngularFireDatabaseModule,
     AngularFireAuthModule,
     ChartsModule,
@@ -90,9 +87,6 @@ export const firebaseConfig = {
     CategoryDetailPage,
     ModalOrderPage,
     LoginPage,
-    UsersPage,
-    TaxesPage,
-    ModalTaxPage,
     RegisterPage,
     SettingPage,
     /* import pages */
@@ -100,15 +94,17 @@ export const firebaseConfig = {
   providers: [
     StatusBar,
     SplashScreen,
-    CategoryService,
-    ItemService,
-    UserService,
-    OrderService,
-    AuthService,
-    NotificationService,
-    ReportService,
-    TaxService,
-    RestaurantService,
+    UserProvider,
+    ItemProvider,
+    CategoryProvider,
+    NotificationProvider,
+    OrderProvider,
+    ReportProvider,
+    SettingProvider,
+    TaxProvider,
+    StoreProvider,
+    LoadingProvider,
+    ToastProvider
     /* import services */
   ]
 })

@@ -1,304 +1,351 @@
+/**
+ * Copyright 2016 Google Inc. All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for t`he specific language governing permissions and
+ * limitations under the License.
+ */
 'use strict';
 
 const functions = require('firebase-functions');
+const mkdirp = require('mkdirp-promise');
+// Include a Service Account Key to use a Signed URL
+const gcs = require('@google-cloud/storage')({keyFilename: 'service-account-credentials.json'});
 const admin = require('firebase-admin');
-const STATUS_PENDING = 'pending';
-const STATUS_COMPLETE = 'complete';
+admin.initializeApp(functions.config().firebase);
+const spawn = require('child-process-promise').spawn;
+const path = require('path');
+const os = require('os');
+const fs = require('fs');
 
-// init app
-//admin.initializeApp(functions.config().firebase);
-admin.initializeApp({
-  credential: admin.credential.cert({
-      projectId: 'eshop-dd728',
-      clientEmail: "foo@eshop-dd728.iam.gserviceaccount.com",
-      privateKey: "-----BEGIN PRIVATE KEY-----\nAIzaSyCHHAGs9PDFJFk0G-DclU258xJdddlhZUM\n-----END PRIVATE KEY-----\n"
-    }),
-  databaseURL: functions.config().databaseURL
+// Thumbnail size
+const THUMB_MAX_HEIGHT = 256; // Max height and width of the thumbnail in pixels.
+const THUMB_MAX_WIDTH = 512;
+const THUMB_PREFIX = 'thumb_'; // Thumbnail prefix added to file names.
+
+// Order status
+const STATUS_PENDING = 'pendiente';
+const STATUS_COMPLETE = 'completada';
+
+/**
+ * When an image is uploaded in the Storage bucket We generate a thumbnail automatically using
+ * ImageMagick.
+ * After the thumbnail has been generated and uploaded to Cloud Storage,
+ * we write the public URL to the Firebase Realtime Database.
+ */
+exports.generateThumbnail = functions.storage.object().onChange(event => {
+  // File and directory paths.
+  const filePath = event.data.name;
+  const contentType = event.data.contentType; // This is the image Mimme type
+  const fileDir = path.dirname(filePath);
+  const fileName = path.basename(filePath);
+  const thumbFilePath = path.normalize(path.join(fileDir, `${THUMB_PREFIX}${fileName}`));
+  const tempLocalFile = path.join(os.tmpdir(), filePath);
+  const tempLocalDir = path.dirname(tempLocalFile);
+  const tempLocalThumbFile = path.join(os.tmpdir(), thumbFilePath);
+
+  // Exit if this is triggered on a file that is not an image.
+  if (!contentType.startsWith('image/')) {
+    console.log('This is not an image.');
+    return null;
+  }
+
+  // Exit if the image is already a thumbnail.
+  if (fileName.startsWith(THUMB_PREFIX)) {
+    console.log('Already a Thumbnail.');
+    return null;
+  }
+
+  // Exit if this is a move or deletion event.
+  if (event.data.resourceState === 'not_exists') {
+    console.log('This is a deletion event.');
+    return null;
+  }
+
+  // Cloud Storage files.
+  const bucket = gcs.bucket(event.data.bucket);
+  const file = bucket.file(filePath);
+  const thumbFile = bucket.file(thumbFilePath);
+  const metadata = {contentType: contentType};
+
+  // Create the temp directory where the storage file will be downloaded.
+  return mkdirp(tempLocalDir).then(() => {
+    // Download file from bucket.
+    return file.download({destination: tempLocalFile});
+  }).then(() => {
+    console.log('The file has been downloaded to', tempLocalFile);
+    // Generate a thumbnail using ImageMagick.
+    return spawn('convert', [
+        tempLocalFile,
+        '-thumbnail',
+        `${THUMB_MAX_WIDTH}x${THUMB_MAX_HEIGHT}^`,
+        '-gravity',
+        'center',
+        '-crop',
+        `${THUMB_MAX_WIDTH}x${THUMB_MAX_HEIGHT}+0+0`,
+        tempLocalThumbFile
+      ], {capture: ['stdout', 'stderr']}
+    );
+
+  }).then(() => {
+    console.log('Thumbnail created at', tempLocalThumbFile);
+    // Uploading the Thumbnail.
+    return bucket.upload(tempLocalThumbFile, {destination: thumbFilePath, metadata: metadata});
+  }).then(() => {
+    console.log('Thumbnail uploaded to Storage at', thumbFilePath);
+    // Once the image has been uploaded delete the local files to free up disk space.
+    fs.unlinkSync(tempLocalFile);
+    fs.unlinkSync(tempLocalThumbFile);
+    // Get the Signed URLs for the thumbnail and original image.
+    const config = {
+      action: 'read',
+      expires: '03-01-2500'
+    };
+    return Promise.all([
+      thumbFile.getSignedUrl(config),
+      file.getSignedUrl(config)
+    ]);
+  }).then(results => {
+    console.log('Got Signed URLs.');
+    const thumbResult = results[0];
+    const originalResult = results[1];
+    const thumbFileUrl = thumbResult[0];
+    const fileUrl = originalResult[0];
+    // Add the URLs to the Database
+    return admin.database().ref('images').push({path: fileUrl, thumbnail: thumbFileUrl});
+  }).then(() => console.log('Thumbnail URLs saved to database.'));
 });
 
 // listen for new order created then calculate order value
-exports.calculateOrder = functions.database.ref('/orders/{userId}/{orderId}').onWrite(function (event) {
-  // Exit when the data is deleted.
-  if (!event.data.exists()) {
-    return;
-  }
-
+exports.calOrder = functions.firestore.document('orders/{orderId}').onCreate(function (event) {
   // Grab the current value of what was written to the Realtime Database
-  const original = event.data.val();
+  const original = event.data.data();
 
-  // if order is created
-  if (!event.data.previous.exists()) {
+  // log record detail
+  console.log('Received order', event.params.orderId);
+  console.log('Order data', original);
 
-    // log record detail
-    console.log('Received order', event.params.userId, event.params.orderId, original);
+  // set status to pending
+  event.data.ref.set({status: STATUS_PENDING}, {merge: true});
 
-    // set status to pending
-    event.data.ref.child('status').set(STATUS_PENDING);
-
-    // set order number
-    admin.database().ref('settings/last_order_number').once('value').then(function (snapshot) {
-      let val = snapshot.val() ? snapshot.val() : 2017000;
-      event.data.ref.child('number').set(val + 1);
-      admin.database().ref('settings/last_order_number').set(val + 1);
-    });
-
-    // set user
-    admin.auth().getUser(event.params.userId).then(function (snapshot) {
-      event.data.ref.child('user').set({
-        email: snapshot.email,
-        name: snapshot.displayName
-      });
-    });
-
-    // set created_at
-    event.data.ref.child('created_at').set(Date.now());
-
-    // set update_at
-    event.data.ref.child('updated_at').set(Date.now());
-
-    // calculate order data
-    var item;
-    var total    = 0,
-        subtotal = 0;
-
-    // apply tax to items
-    admin.database().ref('/taxes').once('value').then(function (snapshot) {
-      var taxes = snapshot.val();
-
-      Object.keys(original.restaurants).forEach(function (restId) {
-        var rest = original.restaurants[restId];
-        var restSubtotal = 0;
-
-        // need to make sure items is not empty
-        if (rest.items) {
-
-          for (var i = 0; i < rest.items.length; i++) {
-            item = rest.items[i];
-            item.taxes = [];
-            // subtotal = size.price + sum(option.price)
-
-            subtotal = parseFloat(item.size ? item.size.price : item.price);
-            if (item.options) {T
-              for (let j = 0; j < item.options.length; j++) {
-                if (item.options[j].checked) {
-                  subtotal += parseFloat(item.options[j].price);
-                }
-              }
-            }
-
-            // total = SUM (subtotal * quantity + tax)
-            restSubtotal += subtotal * item.quantity;
-
-            if (taxes && taxes[restId]) {
-              // tax = tax_rate * quantity * subtotal / 100
-              Object.keys(taxes[restId]).forEach(function (taxId) {
-                var tax = taxes[restId][taxId];
-                if (tax.enable && tax.apply_items && (tax.apply_items.indexOf(item.item_id) > -1)) {
-                  console.log('Tax ok', item.name);
-                  var itemTax = tax.rate * subtotal * item.quantity / 100;
-                  restSubtotal += itemTax;
-
-                  item.taxes.push({
-                    name: tax.name,
-                    rate: tax.rate,
-                    value: itemTax
-                  });
-                }
-              });
-            }
-
-            // write subtotal to firebase
-            event.data.ref.child('restaurants/' + restId + '/items/' + i + '/subtotal').set(subtotal);
-            if (item.taxes) {
-              event.data.ref.child('restaurants/' + restId + '/items/' + i + '/taxes').set(item.taxes);
-            }
-          }
-
-          // update total
-          total += restSubtotal;
-
-          // default status is pending
-          event.data.ref.child('restaurants/' + restId + '/status').set(STATUS_PENDING);
-          event.data.ref.child('restaurants/' + restId + '/subtotal').set(restSubtotal.toFixed(2));
-          admin.database().ref('reports/' + restId + '/order/pending').once('value').then(function (snapshot) {
-            let val = snapshot.val() ? snapshot.val() : 0;
-            admin.database().ref('reports/' + restId + '/order/pending').set(parseInt(val) + 1);
-          });
-
-          // notify to admin
-          admin.database().ref('notifications/' + restId).push({
-            object_type: 'order'
-          });
-        }
-      });
-
-      // write total to firebase
-      // should convert total to float
-      event.data.ref.child('total').set(total.toFixed(2) / 1);
-    });
-
-  }
-});
-
-// listen for order updated and build report
-exports.buildOrderReport = functions.database.ref('/orders/{userId}/{orderId}/restaurants/{restaurantId}').onWrite(function (event) {
-  // Exit when the data is deleted.
-  if (!event.data.exists()) {
-    return;
-  }
-
-  // Grab the current value of what was written to the Realtime Database
-  const original = event.data.val();
-
-  // if order is created
-  if (!event.data.previous.exists()) {
-    return;
-  }
-
-  // send notification if order changed value
-  var statusSnapshot = event.data.child('status');
-  if (statusSnapshot.changed() && (statusSnapshot.val() != STATUS_PENDING)) {
-    // notify to user
-    admin.database().ref('notifications/' + event.params.userId).push({
-      object_type: 'order',
-      order_id: event.params.orderId
-    });
-  }
-
-  // update report by order status
-  if (statusSnapshot.changed()) {
-    var oldStatus = statusSnapshot.previous.val();
-    var total = parseFloat(original.subtotal);
-    var reportPath = 'reports/' + event.params.restaurantId + '/order/';
-    var salePath = 'reports/' + event.params.restaurantId + '/sale/';
-
-    console.log(oldStatus, statusSnapshot.val());
-
-    // minus previous status
-    if (statusSnapshot.previous.exists()) {
-      admin.database().ref(reportPath + oldStatus).once('value').then(function (snapshot) {
-        if (snapshot.val() > 0) {
-          admin.database().ref(reportPath + oldStatus).set(snapshot.val() - 1);
-        }
-      });
+  // set order number
+  var orderSettingDocRef = admin.firestore().collection('settings').doc('order');
+  orderSettingDocRef.get().then(doc => {
+    let val = 2018000001;
+    if (doc.exists) {
+      val = doc.data().orderNumber + 1;
+      orderSettingDocRef.update({orderNumber: val});
+    } else {
+      orderSettingDocRef.set({orderNumber: val});
     }
+    event.data.ref.set({orderNumber: val}, {merge: true});
+  });
 
-    // plus new status
-    admin.database().ref(reportPath + statusSnapshot.val()).once('value').then(function (snapshot) {
-      console.log('status');
-      console.log(snapshot.val());
-      admin.database().ref(reportPath + statusSnapshot.val()).set(snapshot.val() + 1);
-    });
+  // set createdAt & updatedAt
+  event.data.ref.set({
+    createdAt: Date.now(),
+    updatedAt: Date.now(),
+  }, {merge: true});
 
-    // if order is complete, calculate order data
-    if (statusSnapshot.val() == STATUS_COMPLETE) {
-      var date = new Date();
+  // calculate order data
+  let total = 0;
+  let itemDocRef;
+  let soldCount = 0;
 
-      // total sale
-      admin.database().ref(salePath + '/total').once('value').then(function (snapshot) {
-        var snapshotVal = snapshot.val() ? parseFloat(snapshot.val()) : 0;
-        admin.database().ref(salePath + 'total').set(parseFloat(snapshotVal) + total);
-      });
+  original.items.map(item => {
+    total += item.subTotal;
 
-      // by year
-      var yearPath = salePath + '/' + date.getFullYear();
-      admin.database().ref(yearPath + '/total').once('value').then(function (snapshot) {
-        var snapshotVal = snapshot.val() ? parseFloat(snapshot.val()) : 0;
-        admin.database().ref(yearPath + '/total').set(parseFloat(snapshotVal) + total);
-      });
-
-      // by month
-      var monthPath = yearPath + '/' + (date.getMonth() + 1);
-      admin.database().ref(monthPath + '/total').once('value').then(function (snapshot) {
-        console.log(snapshot.val(), total);
-        var snapshotVal = snapshot.val() ? parseFloat(snapshot.val()) : 0;
-        admin.database().ref(monthPath + '/total').set(parseFloat(snapshotVal) + total);
-      });
-
-      // by date
-      var datePath = monthPath + '/' + date.getDate();
-      admin.database().ref(datePath + '/total').once('value').then(function (snapshot) {
-        var snapshotVal = snapshot.val() ? parseFloat(snapshot.val()) : 0;
-        admin.database().ref(datePath + '/total').set(parseFloat(snapshotVal) + total);
-      });
-
-      // report by items
-      original.items.forEach(function (item) {
-        // by items
-        admin.database().ref(salePath + '/items/' + item.item_id).push(item.quantity);
-
-        // by cateogories
-        admin.database().ref('items/' + event.params.restaurantId + '/' + item.item_id + '/category_id').once('value').then(function (catId) {
-          admin.database().ref(salePath + '/categories/' + catId.val()).push(item.quantity)
-        });
-      });
-    }
-
-    // update parent order status
-    admin.database().ref('orders/' + event.params.userId + '/' + event.params.orderId).once('value').then(function (snapshot) {
-      let status = '';
-      let isSame = true;
-      let rest;
-
-      Object.keys(snapshot.val().restaurants).forEach(function (restId) {
-        rest = snapshot.val().restaurants[restId];
-        if (status) {
-          isSame = rest.status == status;
-        } else {
-          status = rest.status;
-        }
-      });
-
-      // if all child orders has same status and parent has difference status
-      if (isSame && (snapshot.val().status != status)) {
-        admin.database().ref('orders/' + event.params.userId + '/' + event.params.orderId + '/status').set(status);
+    // update item report
+    itemDocRef = admin.firestore().collection('items').doc(item.id);
+    itemDocRef.get().then(function (snapshot) {
+      if (snapshot.exists) {
+        soldCount = snapshot.data().soldCount ? snapshot.data().soldCount + item.quantity : item.quantity;
+        itemDocRef.update({soldCount: soldCount});
       }
     });
-  }
+  });
+
+  // send notifications to store
+  admin.firestore().collection('notifications').doc(original.store.id).collection('orders').add({
+    orderId: event.params.orderId
+  });
+
+  // write total to firebase
+  // should convert total to float
+  return event.data.ref.set({total: total.toFixed(2) / 1}, {merge: true});
 });
 
-// add/remove item ID to at /taxes/taxId/apply_items
-exports.appyItemTaxSetting = functions.database.ref('/items/{restId}/{itemId}').onWrite(function (event) {
-  // Exit when the data is deleted.
-  if (!event.data.exists()) {
-    return;
-  }
-
+// listen to order update
+exports.calReport = functions.firestore.document('orders/{orderId}').onUpdate(function (event) {
   // Grab the current value of what was written to the Realtime Database
-  const original = event.data.val();
-  const itemId = event.params.itemId;
+  const newValue = event.data.data();
+  // Grab previous value for comparison
+  const previousValue = event.data.previous.data();
+  // order total value
+  const orderTotal = parseFloat(newValue.total);
+  const date = new Date();
 
-  if (original.taxes) {
+  console.log('status', newValue.status, previousValue.status);
 
-    Object.keys(original.taxes).forEach(function (taxId) {
-      var taxPath = '/taxes/' + event.params.restId + '/' + taxId + '/apply_items';
+  // send notification if order's status has changed
+  if (newValue.status !== previousValue.status) {
 
-      admin.database().ref(taxPath).once('value').then(function (snapshot) {
-        var items = snapshot.val();
-        // if list of apply_items is not empty
-        if (items) {
-          // find itemId in array of apply_items
-          var index = items.indexOf(itemId)
-          // if this item enables this tax
-          if (original.taxes[taxId]) {
-            // push itemId to apply_items if not in array
-            if (index == -1) {
-              items.push(itemId);
-            }
-          } else { // disable this tax
-            if (index != -1) {
-              items.splice(index, 1);
-            }
+    // notify to user if order has changed status
+    if (previousValue.status) {
+      admin.firestore().collection('notifications').doc(newValue.userId).collection('orders').add({
+        orderId: event.params.orderId
+      });
+    }
+
+    // build report data
+    const reportDocRef = admin.firestore().collection('reports').doc(newValue.store.id);
+    var reportData;
+
+    reportDocRef.get().then(function (doc) {
+      // set initial data
+      if (doc.exists) {
+        reportData = doc.data();
+
+        if (reportData.order) {
+          if (reportData.order[newValue.status]) {
+            reportData.order[newValue.status]++;
+          } else {
+            reportData.order[newValue.status] = 1;
+          }
+
+          if (reportData.order[previousValue.status] && (reportData.order[previousValue.status] > 1)) {
+            reportData.order[previousValue.status]--;
+          } else {
+            reportData.order[previousValue.status] = 0;
           }
         } else {
-          // if this item enables this tax
-          if (original.taxes[taxId]) {
-            items = [itemId];
-          }
+          reportData.order = {};
+          reportData.order[newValue.status] = 1;
+        }
+      } else {
+        reportData = {order: {}, sale: {}};
+        reportData.order[newValue.status] = 1;
+      }
+
+      if (newValue.status == STATUS_COMPLETE) {
+        if (reportData.sale.total) {
+          reportData.sale.total += orderTotal;
+        } else {
+          reportData.sale.total = orderTotal;
         }
 
-        admin.database().ref(taxPath).set(items);
-      });
+        const year = date.getFullYear();
+        if (reportData.sale[year]) {
+          reportData.sale[year].total += orderTotal;
+        } else {
+          reportData.sale[year] = {
+            total: orderTotal
+          };
+        }
+
+        const month = date.getMonth() + 1;
+        if (reportData.sale[year][month]) {
+          reportData.sale[year][month].total += orderTotal;
+        } else {
+          reportData.sale[year][month] = {
+            total: orderTotal
+          };
+        }
+
+        const today = date.getDate();
+        if (reportData.sale[year][month][today]) {
+          reportData.sale[year][month][today].total += orderTotal;
+        } else {
+          reportData.sale[year][month][today] = {
+            total: orderTotal
+          };
+        }
+      }
+
+      console.log('report', reportData);
+      return reportDocRef.set(reportData);
     });
   }
 });
+
+// listen to item created
+exports.itemOnCreate = functions.firestore.document('items/{itemId}').onCreate(function (event) {
+  // Grab the current value of what was written to the Realtime Database
+  const original = event.data.data();
+  console.log('item created: ', original);
+
+  return updateItemCount(original.storeId);
+});
+
+// listen to item deleted
+exports.itemOnDelete = functions.firestore.document('items/{itemId}').onDelete(function (event) {
+  // Grab the previous value of what was written to the Realtime Database
+  const original = event.data.previous.data();
+
+  return updateItemCount(original.storeId);
+});
+
+// listen for item review then update item & store rating
+exports.calRate = functions.firestore.document('items/{itemId}/reviews/{reviewId}').onCreate(function (event) {
+  // Grab the current value of what was written to the Realtime Database
+  const original = event.data.data();
+  var itemDocRef = admin.firestore().collection('items').doc(event.params.itemId);
+
+  // calculate avg rating for item
+  itemDocRef.get().then(function (doc) {
+    var item = doc.data();
+    var storeDocRef = admin.firestore().collection('stores').doc(item.storeId);
+
+    if (item.rateCount) {
+      item.rating = (item.rating * item.rateCount + original.rating) / (item.rateCount + 1);
+      item.rateCount++;
+    } else { // on first time
+      item.rating = original.rating;
+      item.rateCount = 1;
+    }
+
+    itemDocRef.update({
+      rating: item.rating.toFixed(2),
+      rateCount: item.rateCount
+    });
+
+    storeDocRef.get().then(function (storeDoc) {
+      var store = storeDoc.data();
+
+      if (store.rateCount) {
+        store.rating = (store.rating * store.rateCount + original.rating) / (store.rateCount + 1);
+        store.rateCount++;
+      } else { // on first time
+        store.rating = original.rating;
+        store.rateCount = 1;
+      }
+
+      storeDocRef.update({
+        rating: store.rating.toFixed(2),
+        rateCount: store.rateCount
+      });
+    });
+  });
+
+  return true;
+});
+
+// update store's itemCount
+var updateItemCount = function (storeId) {
+  var itemCount = 0;
+  var storeDocRef = admin.firestore().collection('stores').doc(storeId);
+
+  return admin.firestore().collection('items').where('storeId', '==', storeId).get().then(function (docs) {
+    itemCount = docs.size;
+    return storeDocRef.update({itemCount: itemCount});
+  });
+
+}

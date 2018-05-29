@@ -15,7 +15,7 @@
         <ion-icon name="md-checkmark"></ion-icon>
       </button>
     </ion-buttons>
-    <ion-title>{{ isEditing ? 'Detalle producto' : 'Agregar producto'}}</ion-title>
+    <ion-title>{{ isEditing ? 'Item detail' : 'Add item'}}</ion-title>
   </ion-navbar>
 
 </ion-header>
@@ -26,7 +26,7 @@
     <ion-row>
 
       <ion-col col-12 col-lg-6>
-        <img class="item-thumb" src="{{ item.thumb }}" (click)="chooseFile()" alt="Thumbnail">
+        <img class="item-thumb" src="{{ item.thumbnail }}" (click)="chooseFile()" alt="Thumbnail">
         <form ngNoForm>
           <input id="item-thumb" name="file" type="file" (change)="upload()">
         </form>
@@ -59,10 +59,10 @@
     </ion-row>
 
     <ion-row>
-      <ion-col col-lg-6>
+      <ion-col col-lg-6 col-12>
         <ion-list class="list-no-border list-form">
           <ion-list-header>
-            Tamaños
+            Sizes
           </ion-list-header>
 
           <ion-item *ngFor="let size of item.sizes, let i = index">
@@ -92,23 +92,23 @@
         </button>
       </ion-col>
 
-      <ion-col col-lg-6>
+      <ion-col col-lg-6 col-12>
         <ion-list class="list-no-border list-form">
           <ion-list-header>
-            Opciones
+            Options
           </ion-list-header>
 
-          <ion-item *ngFor="let option of item.options, let i = index">
+          <ion-item *ngFor="let variation of item.variations, let i = index">
             <ion-grid no-padding>
               <ion-row>
                 <ion-col col-5>
                   <ion-item>
-                    <ion-input type="text" [(ngModel)]="option.name" placeholder="Name" required></ion-input>
+                    <ion-input type="text" [(ngModel)]="variation.name" placeholder="Name" required></ion-input>
                   </ion-item>
                 </ion-col>
                 <ion-col col-5>
                   <ion-item>
-                    <ion-input type="number" [(ngModel)]="option.price" placeholder="Price" required></ion-input>
+                    <ion-input type="number" [(ngModel)]="variation.price" placeholder="Price" required></ion-input>
                   </ion-item>
                 </ion-col>
                 <ion-col col-2>
@@ -124,21 +124,6 @@
           <ion-icon name="add" color="white"></ion-icon>
         </button>
 
-      </ion-col>
-    </ion-row>
-
-    <ion-row>
-      <ion-col col-lg-6>
-        <ion-list class="list-no-border list-form">
-          <ion-list-header>
-            Impuestos/Descuentos
-          </ion-list-header>
-
-          <ion-item *ngFor="let tax of taxes | async">
-            <ion-label>{{ tax.name }} ({{ tax.rate }}%)</ion-label>
-            <ion-toggle [(ngModel)]="item.taxes[tax.$key]"></ion-toggle>
-          </ion-item>
-        </ion-list>
       </ion-col>
     </ion-row>
   </ion-grid>

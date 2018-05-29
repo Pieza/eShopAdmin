@@ -10,7 +10,7 @@
     <button ion-button menuToggle>
       <ion-icon name="menu"></ion-icon>
     </button>
-    <ion-title>Nueva categoria</ion-title>
+    <ion-title>Category Detail</ion-title>
     <ion-buttons end>
       <button ion-button (click)="submit()">
         <ion-icon name="md-checkmark"></ion-icon>
@@ -25,32 +25,27 @@
   <ion-grid>
     <ion-row>
       <ion-col col-12 col-lg-6 class="col-thumb">
-        <img class="cat-thumb" src="{{ category.thumb }}" (click)="chooseFile()" alt="Thumbnail">
+        <img class="cat-thumb" src="{{ category.thumbnail }}" (click)="chooseFile()" alt="Thumbnail">
         <form ngNoForm>
           <input id="file" name="file" type="file" (change)="upload()">
         </form>
       </ion-col>
       <ion-col col-12 col-lg-6>
-        <form [formGroup]="categoryForm">
-          <ion-list class="list-no-border list-form">
-            <ion-item>
-              <ion-input type="text" formControlName="name" [(ngModel)]="category.name" placeholder="Name"></ion-input>
-            </ion-item>
-            <ion-item *ngIf="!categoryForm.controls.name.valid  && (categoryForm.controls.name.dirty || submitAttempt)">
-              <p>Por favor introduce un nombre válido</p>
-            </ion-item>
-          </ion-list>
-        </form>
+        <ion-list class="list-no-border list-form">
+          <ion-item>
+            <ion-input type="text" [(ngModel)]="category.name" placeholder="Name"></ion-input>
+          </ion-item>
+        </ion-list>
       </ion-col>
     </ion-row>
   </ion-grid>
 
   <!-- list of category item-->
-  <div class="padding-xxs">Productos</div>
+  <div class="padding-xs">Items</div>
   <ion-grid>
     <ion-row>
-      <ion-col col-12 col-sm-6 col-md-4 col-lg-3 class="item-block" *ngFor="let item of items | async"
-               [ngStyle]="{'background-image': 'url(' + item.thumb + ')'}" (click)="viewItem(item)"
+      <ion-col col-12 col-sm-6 col-md-4 col-lg-3 class="item-block" *ngFor="let item of items"
+               [ngStyle]="{'background-image': 'url(' + item.thumbnail + ')'}" (click)="viewItem(item)"
                (press)="showOptions(item)">
         <div class="bg">
           <div class="align-bottom">
@@ -67,5 +62,6 @@
       <ion-icon name="add"></ion-icon>
     </button>
   </ion-fab>
+
 
 </ion-content>

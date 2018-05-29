@@ -10,7 +10,7 @@
     <button ion-button menuToggle>
       <ion-icon name="menu"></ion-icon>
     </button>
-    <ion-title>Inicio</ion-title>
+    <ion-title>Home</ion-title>
   </ion-navbar>
 
 </ion-header>
@@ -34,37 +34,37 @@
   <ion-grid class="report-grid">
     <ion-row>
       <ion-col class="total" col-6 col-sm-6 col-md-6 col-lg-3>
-        <span class="report-label">Ventas totales</span>
-        <span class="report-numb">₡{{ total }}</span>
+        <span class="report-label">TOTAL SALE</span>
+        <span class="report-numb">${{ total }}</span>
       </ion-col>
       <ion-col class="year" col-6 col-sm-6 col-md-6 col-lg-3>
-        <span class="report-label">Este año</span>
-        <span class="report-numb">₡{{ thisYear }}</span>
+        <span class="report-label">THIS YEAR</span>
+        <span class="report-numb">${{ thisYear }}</span>
       </ion-col>
       <ion-col class="month" col-6 col-sm-6 col-md-6 col-lg-3>
-        <span class="report-label">Este mes</span>
-        <span class="report-numb">₡{{ thisMonth }}</span>
+        <span class="report-label">THIS MONTH</span>
+        <span class="report-numb">${{ thisMonth }}</span>
       </ion-col>
       <ion-col class="today" col-6 col-sm-6 col-md-6 col-lg-3>
-        <span class="report-label">Hoy</span>
-        <span class="report-numb">₡{{ today }}</span>
+        <span class="report-label">TODAY</span>
+        <span class="report-numb">${{ today }}</span>
       </ion-col>
     </ion-row>
     <ion-row>
       <ion-col class="pending" col-6 col-sm-6 col-md-6 col-lg-3>
-        <span class="report-label">PENDIENTE</span>
+        <span class="report-label">PENDING</span>
         <span class="report-numb">{{ pending }}</span>
       </ion-col>
       <ion-col class="serving" col-6 col-sm-6 col-md-6 col-lg-3>
-        <span class="report-label">ENTREGANDO</span>
+        <span class="report-label">SERVING</span>
         <span class="report-numb">{{ serving }}</span>
       </ion-col>
       <ion-col class="complete" col-6 col-sm-6 col-md-6 col-lg-3>
-        <span class="report-label">COMPLETADAS</span>
+        <span class="report-label">COMPLETED</span>
         <span class="report-numb">{{ complete }}</span>
       </ion-col>
       <ion-col class="cancelled" col-6 col-sm-6 col-md-6 col-lg-3>
-        <span class="report-label">CANCELADAS</span>
+        <span class="report-label">CANCELLED</span>
         <span class="report-numb">{{ cancelled }}</span>
       </ion-col>
     </ion-row>

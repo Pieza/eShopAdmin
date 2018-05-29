@@ -1,30 +1,25 @@
 import { Component } from '@angular/core';
 import { NavController, ViewController, NavParams, AlertController } from 'ionic-angular';
-import { OrderService } from "../../services/order-service";
-import { RestaurantService } from "../../services/restaurant-service";
+import { OrderProvider } from "../../providers/order/order";
+import { Order } from "../../models/order";
 
 
 /*
-  Generated class for the LoginPage page.
+ Generated class for the LoginPage page.
 
-  See http://ionicframework.com/docs/v2/components/#navigation for more info on
-  Ionic pages and navigation.
-*/
+ See http://ionicframework.com/docs/v2/components/#navigation for more info on
+ Ionic pages and navigation.
+ */
 @Component({
   selector: 'page-modal-order',
   templateUrl: 'modal-order.html',
 })
 export class ModalOrderPage {
-  originOrder: any;
-  order: any;
+  order: Order;
 
   constructor(public nav: NavController, public viewCtrl: ViewController, public navParams: NavParams,
-              public orderService: OrderService, public alertCtrl: AlertController,
-              public restaurantService: RestaurantService) {
-    const restaurantId = restaurantService.getId();
-    let order = navParams.get('order');
-    this.originOrder = order;
-    this.order = order.restaurants[restaurantId];
+              public alertCtrl: AlertController, public orderProvider: OrderProvider) {
+    this.order = navParams.get('order');
   }
 
   // dismiss modal
@@ -34,13 +29,13 @@ export class ModalOrderPage {
 
   // change status to serving
   serve() {
-    this.orderService.updateStatus(this.originOrder, 'serving');
+    this.orderProvider.updateStatus(this.order.id, 'serving');
     this.dismiss();
   }
 
   // change status to complete
   complete() {
-    this.orderService.updateStatus(this.originOrder, 'complete');
+    this.orderProvider.updateStatus(this.order.id, 'complete');
     this.dismiss();
   }
 
@@ -59,7 +54,7 @@ export class ModalOrderPage {
         {
           text: 'Yes',
           handler: () => {
-            this.orderService.updateStatus(this.originOrder, 'cancelled');
+            this.orderProvider.updateStatus(this.order.id, 'cancelled');
             this.dismiss();
           }
         }

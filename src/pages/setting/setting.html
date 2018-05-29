@@ -10,7 +10,7 @@
     <button ion-button menuToggle>
       <ion-icon name="menu"></ion-icon>
     </button>
-    <ion-title>Ajustes</ion-title>
+    <ion-title>Setting</ion-title>
   </ion-navbar>
 
 </ion-header>
@@ -18,14 +18,18 @@
 
 <ion-content padding>
   <ion-list class="list-full-border">
-    <ion-item class="item-divider">Configuración del negocio</ion-item>
+    <ion-item class="item-divider">Restaurant setting</ion-item>
 
     <ion-item>
-      <ion-label>Nombre</ion-label>
+      <ion-label>Name</ion-label>
       <ion-input type="text" [(ngModel)]="restaurant.name"></ion-input>
+    </ion-item>
+    <ion-item>
+      <ion-label>Address</ion-label>
+      <ion-input type="text" [(ngModel)]="restaurant.address"></ion-input>
     </ion-item>
   </ion-list>
   <button ion-button block color="primary" (click)="save()">
-    Guardar
+    SAVE
   </button>
 </ion-content>

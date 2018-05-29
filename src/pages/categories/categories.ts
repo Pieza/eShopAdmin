@@ -1,9 +1,9 @@
 import { Component } from '@angular/core';
 import { NavController, ActionSheetController } from 'ionic-angular';
-
-import { CategoryService } from '../../services/category-service';
 import { CategoryDetailPage } from "../category-detail/category-detail";
-import { ItemService } from "../../services/item-service";
+import { CategoryProvider } from "../../providers/category/category";
+import { ItemProvider } from "../../providers/item/item";
+import { Category } from "../../models/category";
 
 /*
   Generated class for the LoginPage page.
@@ -16,11 +16,13 @@ import { ItemService } from "../../services/item-service";
   templateUrl: 'categories.html',
 })
 export class CategoriesPage {
-  categories: any;
+  categories: Array<Category>;
 
-  constructor(public nav: NavController, public categoryService: CategoryService, public itemService: ItemService,
-              public actionSheetCtrl: ActionSheetController) {
-    this.categories = categoryService.getAll();
+  constructor(public nav: NavController, public actionSheetCtrl: ActionSheetController,
+              public categoryProvider: CategoryProvider, public itemProvider: ItemProvider) {
+    categoryProvider.all().subscribe(cats => {
+      this.categories = cats;
+    });
   }
 
   // view category detail
@@ -39,14 +41,16 @@ export class CategoriesPage {
       title: 'Action',
       buttons: [
         {
-          text: 'Borrar',
+          text: 'Delete',
           role: 'destructive',
           handler: () => {
             // remove category
-            this.itemService.removeByCategory(category.$key);
+            this.categoryProvider.remove(category.id).then(() => {
+              this.itemProvider.removeByCategory(category.id);
+            });
           }
         }, {
-          text: 'Cancelar',
+          text: 'Cancel',
           role: 'cancel',
           handler: () => {
             console.log('Cancel clicked');

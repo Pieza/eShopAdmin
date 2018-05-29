@@ -1,10 +1,9 @@
 import { Component } from '@angular/core';
 import { NavController, NavParams } from 'ionic-angular';
-import { ItemService } from "../../services/item-service";
 import { FormBuilder, Validators } from "@angular/forms";
-import { TaxService } from "../../services/tax-service";
-import * as firebase from 'firebase';
-
+import { ItemProvider } from "../../providers/item/item";
+import { Item } from "../../models/item";
+import * as firebase from 'firebase'
 
 /*
  Generated class for the LoginPage page.
@@ -18,15 +17,14 @@ import * as firebase from 'firebase';
 })
 export class ItemDetailPage {
   isEditing = false;
-  item: any;
+  item: Item;
   itemForm: any;
   sizeForm = [];
-  optionForm = [];
+  variationForm = [];
   submitAttempt = false;
-  taxes: any;
 
-  constructor(public nav: NavController, public navParams: NavParams, public itemService: ItemService,
-              public formBuilder: FormBuilder, public taxService: TaxService) {
+  constructor(public nav: NavController, public navParams: NavParams, public formBuilder: FormBuilder,
+              public itemProvider: ItemProvider) {
     // define form validator
     this.itemForm = formBuilder.group({
       name: ['', Validators.compose([Validators.required])],
@@ -34,8 +32,6 @@ export class ItemDetailPage {
       price: ['', Validators.compose([Validators.required])],
     });
 
-    // set list taxes for tax form
-    this.taxes = taxService.getAll();
 
     // set current editing item
     if (navParams.get('item')) {
@@ -46,14 +42,12 @@ export class ItemDetailPage {
       if (!this.item.sizes) {
         this.item.sizes = [];
       }
-      if (!this.item.options) {
-        this.item.options = [];
-      }
-      if (!this.item.taxes) {
-        this.item.taxes = {};
+      if (!this.item.variations) {
+        this.item.variations = [];
       }
     } else {
-      this.item = itemService.getBlankRecord();
+      this.item = itemProvider.defaultItem;
+      this.item.categoryId = navParams.get('category').id;
     }
   }
 
@@ -71,7 +65,7 @@ export class ItemDetailPage {
       let path = `/images/${selectedFile.name}`;
       let iRef = storageRef.child(path);
       iRef.put(selectedFile).then((snapshot) => {
-        this.item.thumb = snapshot.downloadURL;
+        this.item.thumbnail = snapshot.downloadURL;
       });
     }
   }
@@ -83,9 +77,9 @@ export class ItemDetailPage {
     if (this.itemForm.valid) {
       // update current item
       if (this.isEditing) {
-        this.itemService.updateRecord(this.item)
+        this.itemProvider.update(this.item.id, this.item);
       } else {
-        this.itemService.addRecord(this.item, this.navParams.get('category'));
+        this.itemProvider.add(this.item);
       }
 
       this.nav.pop();
@@ -96,7 +90,7 @@ export class ItemDetailPage {
   addSize() {
     this.item.sizes.push({
       name: '',
-      price: ''
+      price: 0
     })
     this.sizeForm.push(this.formBuilder.group({
       name: ['', Validators.compose([Validators.required])],
@@ -109,20 +103,20 @@ export class ItemDetailPage {
     this.item.sizes.splice(index, 1);
   }
 
-  // add item option
+  // add item variation
   addOption() {
-    this.item.options.push({
+    this.item.variations.push({
       name: '',
-      price: ''
+      price: 0
     });
-    this.optionForm.push(this.formBuilder.group({
+    this.variationForm.push(this.formBuilder.group({
       name: ['', Validators.compose([Validators.required])],
       price: ['', Validators.compose([Validators.required])],
     }));
   }
 
-  // remove option from list
+  // remove variation from list
   removeOption(index) {
-    this.item.options.splice(index, 1);
+    this.item.variations.splice(index, 1);
   }
 }

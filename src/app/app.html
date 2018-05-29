@@ -1,5 +1,5 @@
 <ion-split-pane>
-  <ion-menu [content]="content" *ngIf="user.$key">
+  <ion-menu [content]="content" *ngIf="user">
 
     <ion-content class="menu-left">
       <ion-navbar color="primary">
@@ -9,6 +9,7 @@
       <!-- User profile -->
       <div text-left padding class="menu-left">
         <a menuClose>
+          <img class="profile-picture" src="{{ user.photoUrl }}">
           <h4 color="dark">{{ user.name }}</h4>
         </a>
       </div>
@@ -20,7 +21,7 @@
         </button>
         <button ion-item menuClose (click)="logout()">
           <!--<ion-icon item-left name="ios-exit-outline"></ion-icon>-->
-          Cerrar Sesión
+          Logout
         </button>
       </ion-list>
     </ion-content>

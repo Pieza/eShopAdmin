@@ -1,8 +1,8 @@
 import { Component } from '@angular/core';
 import { NavController, ModalController } from 'ionic-angular';
-import { OrderService } from '../../services/order-service';
 import { ModalOrderPage } from "../modal-order/modal-order";
-import { RestaurantService } from "../../services/restaurant-service";
+import { OrderProvider } from "../../providers/order/order";
+import { Order } from "../../models/order";
 
 /*
   Generated class for the LoginPage page.
@@ -15,14 +15,13 @@ import { RestaurantService } from "../../services/restaurant-service";
   templateUrl: 'order.html',
 })
 export class OrderPage {
-  orders: any;
-  restaurantId: any;
+  orders: Array<Order>;
 
-  constructor(public nav: NavController, public orderService: OrderService, public modalCtrl: ModalController,
-              public restaurantService: RestaurantService) {
-    this.restaurantId = restaurantService.getId();
+  constructor(public nav: NavController,  public modalCtrl: ModalController, public orderProvider: OrderProvider) {
     // get data from firebase
-    this.orders = orderService.getAll();
+    orderProvider.all().subscribe(orders => {
+      this.orders = orders;
+    });
   }
 
   // show order modal

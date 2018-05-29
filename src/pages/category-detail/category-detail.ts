@@ -1,10 +1,12 @@
 import { Component } from '@angular/core';
-import { NavController, NavParams, ActionSheetController } from 'ionic-angular';
-import { CategoryService } from '../../services/category-service';
+import { NavController, NavParams, ActionSheetController, AlertController } from 'ionic-angular';
 import { ItemDetailPage } from "../item-detail/item-detail";
-import { ItemService } from "../../services/item-service";
-import { FormBuilder, Validators } from "@angular/forms";
 import * as firebase from 'firebase';
+import { ItemProvider } from "../../providers/item/item";
+import { CategoryProvider } from "../../providers/category/category";
+import { Category } from "../../models/category";
+import { StoreProvider } from "../../providers/store/store";
+import { DEFAULT_ITEM_THUMB } from "../../providers/constants";
 
 /*
  Generated class for the LoginPage page.
@@ -18,41 +20,48 @@ import * as firebase from 'firebase';
 })
 export class CategoryDetailPage {
   items: any;
-  category: any;
-  categoryForm: any;
+  category: Category;
   isEditing = false;
-  submitAttempt = false;
+  defaultCategory: Category = {
+    storeId: '',
+    name: '',
+    thumbnail: DEFAULT_ITEM_THUMB,
+    itemCount: 0
+  };
 
-  constructor(public nav: NavController, public navParams: NavParams, public categoryService: CategoryService,
-              public itemService: ItemService, public actionSheetCtrl: ActionSheetController,
-              public formBuilder: FormBuilder) {
-    // define form validator
-    this.categoryForm = formBuilder.group({
-      name: ['', Validators.compose([Validators.required])]
-    });
+  constructor(public nav: NavController, public navParams: NavParams, public actionSheetCtrl: ActionSheetController,
+              public itemProvider: ItemProvider, public categoryProvider: CategoryProvider,
+              public alertCtrl: AlertController, public storeProvider: StoreProvider) {
 
     // set current editing category
     if (navParams.get('category')) {
       this.isEditing = true;
       this.category = navParams.get('category');
-      this.items = itemService.findByCategory(this.category);
+      itemProvider.findByCategory(this.category.id).subscribe(items => {
+        this.items = items;
+      });
     } else {
-      this.category = categoryService.getBlankRecord();
+      this.category = this.defaultCategory;
+      this.category.storeId = this.storeProvider.getCurrent().id;
     }
   }
 
   // handle form submit
   submit() {
-    this.submitAttempt = true;
-
-    if (this.categoryForm.valid) {
-      if (this.isEditing) {
-        this.categoryService.updateRecord(this.category);
-      } else {
-        this.categoryService.addRecord(this.category).then(snapshot => this.category.$key = snapshot.key);
-      }
-      this.nav.pop();
+    if (!this.category.name) {
+      let alert = this.alertCtrl.create({
+        message: 'Please enter category name',
+        buttons: ['OK']
+      });
+      return alert.present();
     }
+
+    if (this.isEditing) {
+      this.categoryProvider.update(this.category.id, this.category);
+    } else {
+      this.categoryProvider.add(this.category);
+    }
+    this.nav.pop();
   }
 
   // choose file for upload
@@ -70,7 +79,7 @@ export class CategoryDetailPage {
       let path = `/images/${selectedFile.name}`;
       let iRef = storageRef.child(path);
       iRef.put(selectedFile).then((snapshot) => {
-        this.category.thumb = snapshot.downloadURL;
+        this.category.thumbnail = snapshot.downloadURL;
       });
     }
   }
@@ -94,8 +103,8 @@ export class CategoryDetailPage {
           text: 'Delete',
           role: 'destructive',
           handler: () => {
-            // remove category
-            this.itemService.removeRecord(item, this.category);
+            // remove item
+            this.itemProvider.remove(item.id);
           }
         }, {
           text: 'Cancel',

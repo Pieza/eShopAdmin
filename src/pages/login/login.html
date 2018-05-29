@@ -10,7 +10,7 @@
     <!-- Logo -->
     <div padding text-center>
       <div class="logo primary-bg">
-        <ion-icon name="ios-key" color="light"></ion-icon>
+        <ion-icon name="md-restaurant" color="light"></ion-icon>
       </div>
     </div>
 
@@ -18,12 +18,12 @@
     <ion-list class="list-form list-no-border">
 
       <ion-item>
-        <ion-label stacked>Correo</ion-label>
+        <ion-label stacked>Email</ion-label>
         <ion-input type="email" [(ngModel)]="email"></ion-input>
       </ion-item>
 
       <ion-item>
-        <ion-label stacked>Contraseña</ion-label>
+        <ion-label stacked>Password</ion-label>
         <ion-input type="password" [(ngModel)]="password"></ion-input>
       </ion-item>
 
@@ -33,13 +33,13 @@
 
     <div margin-top>
       <button ion-button block color="primary" (click)="login()">
-        INICIAR SESION
+        SIGN IN
       </button>
     </div>
 
     <!-- Other links -->
     <div text-center margin-top>
-      <span ion-text (click)="register()">Registrarse</span>
+      <span ion-text (click)="register()">New here? Sign up</span>
     </div>
   </div>
 </ion-content>

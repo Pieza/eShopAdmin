@@ -1,9 +1,6 @@
 import { Component } from '@angular/core';
 import { NavController } from 'ionic-angular';
 
-import { ItemService } from '../../services/item-service';
-import { CategoryService } from '../../services/category-service';
-
 /*
   Generated class for the LoginPage page.
 
@@ -16,6 +13,6 @@ import { CategoryService } from '../../services/category-service';
 })
 export class ItemsPage {
 
-  constructor(public nav: NavController, public itemService: ItemService, public categoryService: CategoryService) {
+  constructor(public nav: NavController) {
   }
 }

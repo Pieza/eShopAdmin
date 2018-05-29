@@ -1,6 +1,7 @@
 import { Component } from '@angular/core';
 import { NavController, ToastController } from 'ionic-angular';
-import { RestaurantService } from "../../services/restaurant-service";
+import { StoreProvider } from "../../providers/store/store";
+import { Store } from "../../models/store";
 
 
 /*
@@ -14,19 +15,18 @@ import { RestaurantService } from "../../services/restaurant-service";
   templateUrl: 'setting.html',
 })
 export class SettingPage {
-  restaurant: any = {};
+  restaurant: Store;
 
-  constructor(public nav: NavController, public restaurantService: RestaurantService, public toastCtrl: ToastController) {
-    this.restaurantService.getCurrent().take(1).subscribe(snapshot => {
-      this.restaurant = snapshot;
-    });
+  constructor(public nav: NavController, public toastCtrl: ToastController,
+              public storeProvider: StoreProvider) {
+    this.restaurant = storeProvider.getCurrent();
   }
 
   // save form
   save() {
-    this.restaurantService.update(this.restaurant.name);
+    this.storeProvider.update(this.restaurant);
     let toast = this.toastCtrl.create({
-      message: 'Los ajustes han sido guardados',
+      message: 'Settings have been saved',
       duration: 3000,
       position: 'middle'
     });

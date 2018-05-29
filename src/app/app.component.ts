@@ -1,21 +1,22 @@
-///<reference path="../pages/login/login.ts"/>
 import { Component } from '@angular/core';
 import { Platform, AlertController } from 'ionic-angular';
 import { ViewChild } from '@angular/core';
 import { StatusBar } from '@ionic-native/status-bar';
 import { SplashScreen } from '@ionic-native/splash-screen';
+import { AUTH_ERROR_NO_PERMISSION } from "../providers/constants";
+
+// import providers
+import { AngularFireAuth } from "angularfire2/auth/auth";
+import { NotificationProvider } from "../providers/notification/notification";
+import { UserProvider } from "../providers/user/user";
 
 // import pages
 import { CategoriesPage } from '../pages/categories/categories';
 import { OrderPage } from '../pages/order/order';
 import { HomePage } from '../pages/home/home';
 import { LoginPage } from "../pages/login/login";
-import { AuthService } from "../services/auth-service";
-import { NotificationService } from "../services/notification-service";
-import { TaxesPage } from '../pages/taxes/taxes';
-import { AngularFireAuth } from "angularfire2/auth/auth";
-import { RestaurantService } from "../services/restaurant-service";
 import { SettingPage } from '../pages/setting/setting';
+import { User } from "../models/user";
 // end import pages
 
 @Component({
@@ -27,39 +28,31 @@ import { SettingPage } from '../pages/setting/setting';
 export class MyApp {
 
   public rootPage: any;
-
   public nav: any;
   public notiSubcriber: any;
-
-  public user = {};
+  public user: User;
 
   public pages = [
     {
-      title: 'Inicio',
+      title: 'Home',
       icon: 'ios-home-outline',
       count: 0,
       component: HomePage
     },
     {
-      title: 'Catálogo',
+      title: 'Categories',
       icon: 'ios-home-outline',
       count: 0,
       component: CategoriesPage
     },
     {
-      title: 'Ordenes',
+      title: 'Order',
       icon: 'ios-home-outline',
       count: 0,
       component: OrderPage
     },
     {
-      title: 'Impuestos/Descuentos',
-      icon: 'ios-home-outline',
-      count: 0,
-      component: TaxesPage
-    },
-    {
-      title: 'Ajustes',
+      title: 'Settings',
       icon: 'ios-home-outline',
       count: 0,
       component: SettingPage
@@ -67,9 +60,9 @@ export class MyApp {
     // import menu
   ];
 
-  constructor(platform: Platform, statusBar: StatusBar, splashScreen: SplashScreen, public authService: AuthService,
-              public notificationService: NotificationService, public alertCtrl: AlertController,
-              public afAuth: AngularFireAuth, public restaurantService: RestaurantService) {
+  constructor(platform: Platform, statusBar: StatusBar, splashScreen: SplashScreen, public alertCtrl: AlertController,
+              public afAuth: AngularFireAuth, public userProvider: UserProvider,
+              public notificationProvider: NotificationProvider) {
 
     platform.ready().then(() => {
       // Okay, so the platform is ready and our plugins are available.
@@ -77,72 +70,86 @@ export class MyApp {
       statusBar.styleDefault();
       splashScreen.hide();
 
-      // check for login stage, then redirect
-      afAuth.authState.subscribe(authData => {
+      // check auth on init
+      afAuth.authState.take(1).subscribe(authData => {
+        // if user logged in
         if (authData) {
-          // check user role
-          // need to have admin role to continue
-          this.authService.getAdmin().take(1).subscribe(admin => {
-            if (admin && admin.email) {
-              this.nav.setRoot(HomePage);
-              this.restaurantService.setId(admin.restaurantId);
-              console.log(admin);
-              this.user = admin;
-              this.subscribeNotification();
-            } else {
-              let alert = this.alertCtrl.create({
-                title: 'Error',
-                subTitle: "You don't have permission to access this app",
-                buttons: ['OK']
-              });
-              alert.present();
-
-              this.logout();
-            }
-          });
+          userProvider.initProviders(authData);
         } else {
-          this.nav.setRoot(LoginPage).then(() => this.user = {});
+          this.nav.setRoot(LoginPage);
+        }
+      });
+
+      // listen for auth change
+      userProvider.authenticated.subscribe(user => {
+        if (user == AUTH_ERROR_NO_PERMISSION) {
+          // user has no admin permission
+          let alert = this.alertCtrl.create({
+            title: 'Error',
+            subTitle: AUTH_ERROR_NO_PERMISSION,
+            buttons: ['OK']
+          });
+          alert.present();
+          // logout
+          this.userProvider.logout();
+        } else if (user) {
+          this.user = user;
+          this.subNoti();
+          this.nav.setRoot(CategoriesPage);
+        } else if (user === false) {
+          this.unSubNoti();
+          this.nav.setRoot(LoginPage);
         }
       });
     });
   }
 
   // subscribe for notifications
-  subscribeNotification() {
+  subNoti() {
     let isShowing = false;
+    let notiCount = 0;
+    let alert;
+
     // subscribe to notifications
-    this.notiSubcriber = this.notificationService.getAll().subscribe(records => {
-      if (records.length && !isShowing) {
+    this.notiSubcriber = this.notificationProvider.all().subscribe(records => {
+      // Only listen for new notifcation
+      if (records.length > notiCount && !isShowing) {
         isShowing = true;
-        // show the last notifications
-        let lastRecord = records[records.length - 1];
-        if (lastRecord.object_type == 'order') {
-          let alert = this.alertCtrl.create({
-            title: 'New order',
-            subTitle: 'New order has been created.',
-            buttons: [
-              {
-                text: 'View',
-                handler: data => {
-                  this.nav.setRoot(OrderPage);
-                  // remove this notifications
-                  this.notificationService.remove(lastRecord.$key);
-                  isShowing = false;
-                }
-              },
-              {
-                text: 'Close',
-                handler: data => {
-                  this.notificationService.remove(lastRecord.$key);
-                  isShowing = false;
-                }
+        // show the notifications
+
+        alert = this.alertCtrl.create({
+          title: 'New order',
+          subTitle: 'New order(s) has been created.',
+          buttons: [
+            {
+              text: 'View',
+              handler: data => {
+                this.nav.setRoot(OrderPage);
+                // remove this notifications
+                this.notificationProvider.removeAll(records);
+                isShowing = false;
               }
-            ]
-          });
-          alert.present();
-        }
+            },
+            {
+              text: 'Close',
+              handler: data => {
+                this.notificationProvider.removeAll(records);
+                isShowing = false;
+              }
+            }
+          ]
+        });
+        alert.present();
       }
+
+      notiCount = records.length;
     });
+  }
+
+  unSubNoti() {
+    if (this.notiSubcriber) {
+      this.notiSubcriber.unsubscribe();
+    }
   }
 
   openPage(page) {
@@ -153,8 +160,6 @@ export class MyApp {
 
   // logout
   logout() {
-    this.authService.logout().then(() => {
-      this.notiSubcriber.unsubscribe();
-    });
+    this.userProvider.logout();
   }
 }
