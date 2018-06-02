@@ -10,7 +10,7 @@
     <button ion-button menuToggle>
       <ion-icon name="menu"></ion-icon>
     </button>
-    <ion-title>Category Detail</ion-title>
+    <ion-title>{{category.name}}</ion-title>
     <ion-buttons end>
       <button ion-button (click)="submit()">
         <ion-icon name="md-checkmark"></ion-icon>
@@ -41,7 +41,7 @@
   </ion-grid>
 
   <!-- list of category item-->
-  <div class="padding-xs">Items</div>
+  <div class="padding-xs">Productos</div>
   <ion-grid>
     <ion-row>
       <ion-col col-12 col-sm-6 col-md-4 col-lg-3 class="item-block" *ngFor="let item of items"
@@ -50,7 +50,7 @@
         <div class="bg">
           <div class="align-bottom">
             <h6 ion-text class="pull-left" color="white">{{ item.name }}</h6>
-            <span ion-text color="white" class="price pull-right">${{ item.price }}</span>
+            <span ion-text color="white" class="price pull-right">₡{{ item.price }}</span>
           </div>
         </div>
       </ion-col>

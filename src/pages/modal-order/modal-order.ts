@@ -29,20 +29,20 @@ export class ModalOrderPage {
 
   // change status to serving
   serve() {
-    this.orderProvider.updateStatus(this.order.id, 'serving');
+    this.orderProvider.updateStatus(this.order.id, 'entregando');
     this.dismiss();
   }
 
   // change status to complete
   complete() {
-    this.orderProvider.updateStatus(this.order.id, 'complete');
+    this.orderProvider.updateStatus(this.order.id, 'completada');
     this.dismiss();
   }
 
   // cancel order
   cancel() {
     let alert = this.alertCtrl.create({
-      message: 'Are you sure to cancel this order?',
+      message: '¿Seguro que deseas cancelar esta orden?',
       buttons: [
         {
           text: 'No',
@@ -52,9 +52,9 @@ export class ModalOrderPage {
           }
         },
         {
-          text: 'Yes',
+          text: 'Si',
           handler: () => {
-            this.orderProvider.updateStatus(this.order.id, 'cancelled');
+            this.orderProvider.updateStatus(this.order.id, 'cancelada');
             this.dismiss();
           }
         }
